@@ -355,6 +355,21 @@ the vertices (`𝒫 V(H)`) is represented in `E(H)`
 -/
 def IsComplete (H : Hypergraph α) : Prop := ∀ e ∈ 𝒫 V(H), e ∈ E(H)
 
+@[simps]
+def completeOn (f : Set α) : Hypergraph α where
+  vertexSet := f
+  hyperedgeSet := 𝒫 f
+  hyperedge_isSubset_vertexSet' := by simp
+
+@[simp]
+lemma mem_completeOn {e f : Set α} : e ∈ E(completeOn f) ↔ e ⊆ f := by
+  constructor
+  · exact fun a ↦ a
+  · exact fun a ↦ a
+
+@[simp]
+lemma isComplete_completeOn (f : Set α) : (completeOn f).IsComplete := by exact fun e a ↦ a
+
 /--
 Predicate to determine if a hypergraph is simple
 
