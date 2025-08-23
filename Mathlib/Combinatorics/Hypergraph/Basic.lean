@@ -96,8 +96,6 @@ instance : Membership (Set α) (Hypergraph α) where
   mem H e := e ∈ E(H)
 
 
-section Incidence
-
 /-! ## Vertex-Hyperedge Incidence -/
 
 @[simp] lemma hyperedge_isSubset_vertexSet {H : Hypergraph α} {e : Set α} (he : e ∈ E(H)) :
@@ -128,10 +126,6 @@ lemma forall_of_forall_verts {e e' : Set α} (he : e ∈ E(H)) (he' : e' ∈ E(H
 lemma sUnion_hyperedgeSet_subset_vertexSet : Set.sUnion E(H) ⊆ V(H) := by
   refine subset_powerset_iff.mp ?_
   exact coe_isSubset_vertexSet_powerset
-
-end Incidence
-
-section Adjacency
 
 /-! ## Vertex and Hyperedge Adjacency -/
 
@@ -206,9 +200,6 @@ incident on both `e` and `f`, i.e., if the two hyperedges are adjacent (see `Hyp
 -/
 def hyperedgeNeighbors (H : Hypergraph α) (e : Set α) : Set (Set α) := {f | H.EAdj e f}
 
-end Adjacency
-
-section DefsPreds
 
 /-! ## Basic Hypergraph Definitions & Predicates-/
 
@@ -225,6 +216,12 @@ incident upon
 def stars (H : Hypergraph α) : Set (Set (Set α)) :=
   {H.star x | x ∈ V(H)}
 
+/--
+The *image* of a hypergraph `H : Hypergraph α` under function `f : α → β` is `Hᶠ : Hypergraph β`.
+
+The vertex set of `Hᶠ` is the image of `V(H)` under `f`, and the hyperedge set of `Hᶠ` is the set
+of images of the hyperedges (subsets of vertices) in `E(H)`.
+-/
 @[simps]
 def image (H : Hypergraph α) (f : α → β) : Hypergraph β where
   vertexSet := V(H).image f
@@ -293,6 +290,11 @@ Predicate to determine if a hypergraph is empty
 def IsEmpty (H : Hypergraph α) : Prop := V(H) = ∅ ∧ E(H) = ∅
 
 /--
+Predicate to determine if a hypergraph is nonempty
+-/
+def IsNonempty (H : Hypergraph α) : Prop := (∃ x, x ∈ V(H)) ∨ (∃ e, e ∈ E(H))
+
+/--
 The empty hypergraph of type α
 -/
 def emptyHypergraph (α : Type*) : Hypergraph α :=
@@ -305,17 +307,94 @@ def emptyHypergraph (α : Type*) : Hypergraph α :=
     exact Set.subset_empty_iff.mpr h1
   )
 
+@[simp] lemma coe_nonempty : V(H).Nonempty → H.IsNonempty := by
+  unfold IsNonempty
+  unfold Set.Nonempty
+  exact fun a ↦ Or.symm (Or.inr a)
+
 lemma isEmpty_empty_hypergraph {α : Type*} : IsEmpty (Hypergraph.emptyHypergraph α) := by
   unfold IsEmpty
   exact Prod.mk_inj.mp rfl
 
 @[simp]
-lemma isEmpty_eq_empty_hypergraph {H : Hypergraph α} (h : H.IsEmpty) : H = emptyHypergraph α := by
-  exact Hypergraph.ext_iff.mpr h
+lemma isEmpty_eq_empty_hypergraph {H : Hypergraph α} (h : H.IsEmpty) : emptyHypergraph α = H := by
+  unfold IsEmpty at h
+  have hv : V(emptyHypergraph α) = ∅ := rfl
+  have he : E(emptyHypergraph α) = ∅ := rfl
+  apply Hypergraph.ext_iff.mpr
+  rw [h.1, hv, h.2, he]
+  constructor
+  · exact hv
+  · exact he
 
 @[simp]
 lemma hyperedge_not_mem_empty {α : Type*} {e : Set α} : e ∉ E(emptyHypergraph α) :=
   by exact fun a ↦ a
+
+lemma IsEmpty.eq (hH : H.IsEmpty) : V(H) = ∅ ∧ E(H) = ∅ := by exact hH
+
+lemma isEmpty_iff_forall_not_mem : H.IsEmpty ↔ (∀ x, x ∉ V(H)) ∧ (∀ e, e ∉ E(H)) := by
+  unfold IsEmpty
+  constructor
+  · intro h
+    constructor
+    · rw [h.1]
+      apply Set.notMem_empty
+    · rw [h.2]
+      apply Set.notMem_empty
+  · intro ho
+    constructor
+    · apply Set.eq_empty_iff_forall_notMem.mpr
+      apply ho.left
+    · apply Set.eq_empty_iff_forall_notMem.mpr
+      apply ho.right
+
+lemma IsEmpty.not_mem (hH : H.IsEmpty) {e : Set α} : e ∉ E(H) := by
+  unfold IsEmpty at hH
+  rw [hH.2]
+  exact fun a ↦ a
+
+@[simp] lemma not_isEmpty : ¬ H.IsEmpty ↔ H.IsNonempty := by
+  unfold IsEmpty
+  unfold IsNonempty
+  constructor
+  · intro h
+    rw [not_and_or] at h
+    cases h with
+    | inl v_nonempty => (
+      left
+      refine nonempty_def.mp ?_
+      exact nonempty_iff_ne_empty.mpr v_nonempty
+    )
+    | inr e_nonempty => (
+      right
+      refine nonempty_def.mp ?_
+      exact nonempty_iff_ne_empty.mpr e_nonempty
+    )
+  · intro h'
+    rw [not_and_or]
+    cases h' with
+    | inl v_nonempty => (
+      left
+      exact nonempty_iff_ne_empty.mp v_nonempty
+    )
+    | inr e_nonempty => (
+      right
+      exact nonempty_iff_ne_empty.mp e_nonempty
+    )
+
+@[simp] lemma not_isNonempty : ¬ H.IsNonempty ↔ H.IsEmpty :=
+  not_iff_comm.mp not_isEmpty
+
+alias ⟨_, IsEmpty.not_isNonempty⟩ := not_isNonempty
+alias ⟨_, IsNonempty.not_isEmpty⟩ := not_isEmpty
+
+variable (H) in
+lemma isEmpty_or_isNonempty : H.IsEmpty ∨ H.IsNonempty := by
+  unfold IsEmpty
+  unfold IsNonempty
+  grind
+
 
 /--
 Predicate to determine if a hypergraph is trivial
@@ -371,14 +450,59 @@ lemma mem_completeOn {e f : Set α} : e ∈ E(completeOn f) ↔ e ⊆ f := by
 lemma isComplete_completeOn (f : Set α) : (completeOn f).IsComplete := by exact fun e a ↦ a
 
 /--
-Predicate to determine if a hypergraph is simple
-
-A simple hypergraph is one in which, for each hyperedge `e ∈ E(H)` (with associated vertex subset
-`s : Set α`), there is no other hyperedge `f ∈ E(H)` (with associated vertex subset `t : Set α`)
-such that `s ⊂ t`.
+A complete hypergraph with vertex set f
 -/
-def IsSimple (H : Hypergraph α) : Prop := ∀ e ∈ E(H), ∀ f ∈ E(H) \ {e}, ¬e ⊆ f
+@[simps]
+def completeOn (f : Set α) : Hypergraph α where
+  vertexSet := f
+  hyperedgeSet := 𝒫 f
+  hyperedge_isSubset_vertexSet' := by simp
 
-end DefsPreds
+@[simp]
+lemma mem_completeOn {e f : Set α} : e ∈ E(completeOn f) ↔ e ⊆ f := by
+  constructor
+  · exact fun a ↦ a
+  · exact fun a ↦ a
+
+@[simp]
+lemma isComplete_completeOn (f : Set α) : (completeOn f).IsComplete := by exact fun e a ↦ a
+
+@[simp]
+lemma isComplete_not_isEmpty {H : Hypergraph α} (h : H.IsComplete) : ¬ H.IsEmpty := by
+  unfold IsComplete at h
+  unfold IsEmpty
+  have h0 : ∅ ∈ 𝒫 V(H) := by
+    refine mem_powerset ?_
+    apply Set.empty_subset
+  apply not_and_or.mpr
+  right
+  grind
+
+@[simp]
+lemma completeOn_isNonempty {S : Set α} : (completeOn S).IsNonempty := by
+  have h : E(completeOn S) = 𝒫 S := rfl
+  have h' : ∅ ∈ E(completeOn S) := by
+    refine mem_completeOn.mpr ?_
+    apply Set.empty_subset
+  unfold IsNonempty
+  right
+  use ∅
+
+@[simp]
+lemma isComplete_not_isTrivial {H : Hypergraph α} (h : H.IsComplete) : ¬H.IsTrivial := by
+  unfold IsComplete at h
+  unfold IsTrivial
+  have h' : ∅ ∈ E(H) := by grind
+  apply not_and_or.mpr
+  right
+  exact ne_of_mem_of_not_mem' h' fun a ↦ a
+
+@[simp]
+lemma completeOn_not_isTrivial {S : Set α} : ¬(completeOn S).IsTrivial := by
+  unfold IsTrivial
+  apply not_and_or.mpr
+  right
+  simp
+  exact ne_of_mem_of_not_mem' (fun ⦃a⦄ a ↦ a) fun a ↦ a
 
 end Hypergraph
