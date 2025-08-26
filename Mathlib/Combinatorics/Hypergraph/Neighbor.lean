@@ -9,36 +9,71 @@ import Mathlib.Data.Fintype.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Combinatorics.Hypergraph.Basic
 
+/-!
+# Hypergraph neighbors and neighborhood hypergraphs
+
+TODO
+-/
+
+open Set
+
+variable {α β γ : Type*} {x y : α} {e e' f g : Set α} {l : Set (Set α)}
+
+namespace Hypergraph
+
+variable {H : Hypergraph α}
+
 /--
-The neighbourhood of a subset `v` is the hypergraph formed by those edges in `G` which contain `v`,
-after having `v` removed from them.
+The neighbourhood of a subset `v` is the hypergraph formed by those hyperedges in `H` which contain
+`v`, after having `v` removed from them.
+
 Viewing a simple graph as a 2-uniform hypergraph and a set as a 1-uniform hypergraph, this
 recovers the simple graph notion of neighbourhood.
 -/
 @[simps]
-def neighbourhood [DecidableEq α] (G : Hypergraph α) (v : Finset α) : Hypergraph α where
-  verts := G.verts \ v
-  edges := (G.edges.filter fun e ↦ v ⊆ e).image (· \ v)
-  edge_subset_verts' := by
-    simp only [Finset.mem_image, mem_filter, mem_coe, forall_exists_index, and_imp]
+def neighbourhood (H : Hypergraph α) (v : Set α) : Hypergraph α where
+  vertexSet := V(H) \ v
+  hyperedgeSet := {e | e ∈ E(H) ∧ v ⊆ e}.image (· \ v)
+  hyperedge_isSubset_vertexSet' := by
+    simp
     rintro _ e he hve rfl
-    exact sdiff_subset_sdiff_left he.subset_verts
+    refine diff_subset_diff_left ?_
+    exact Membership.mem.subset_vertexSet he
 
-lemma mem_neighbourhood [DecidableEq α] {v e : Finset α} :
-    e ∈ G.neighbourhood v ↔ ∃ a ∈ G, v ⊆ a ∧ a \ v = e := by
-  rw [← mem_coe]; simp [coe_neighbourhood, and_assoc]
+lemma mem_neighbourhood {v : Set α} :
+  e ∈ E(H.neighbourhood v) ↔ ∃ e' ∈ E(H), v ⊆ e' ∧ e' \ v = e := by
+  simp
+  grind
 
 /-- An alternate description of the edges of the neighbourhood hypergraph. -/
-lemma mem_neighbourhood' [DecidableEq α] {v e : Finset α} :
-    e ∈ G.neighbourhood v ↔ e ∪ v ∈ G ∧ Disjoint e v := by
+lemma mem_neighbourhood' {v e : Set α} :
+    e ∈ E(H.neighbourhood v) ↔ e ∪ v ∈ E(H) ∧ Disjoint e v := by
   rw [mem_neighbourhood]
   constructor
   · rintro ⟨e, he, he', rfl⟩
-    rw [sdiff_union_of_subset he']
-    exact ⟨he, sdiff_disjoint⟩
+    rw [diff_union_of_subset he']
+    exact ⟨he, Set.disjoint_sdiff_left⟩
   · rintro ⟨hev, hev'⟩
-    exact ⟨_, hev, by simp, union_sdiff_cancel_right hev'⟩
+    use e ∪ v
+    constructor
+    · exact hev
+    · constructor
+      · exact Set.subset_union_right
+      · have h : (e ∩ v) ⊆ ∅ := by exact Set.disjoint_iff.mp hev'
+        exact Set.union_diff_cancel_right h
 
-lemma card_neighbourhood [DecidableEq α] {v : Finset α} :
-    #(G.neighbourhood v).edges = #{e ∈ G | v ⊆ e} := by
-  rw [coe_neighbourhood, card_image_of_injOn ((superset_injOn_sdiff _).mono (by simp))]
+lemma card_neighbourhood {v : Set α} :
+  E(H.neighbourhood v).encard = {e ∈ E(H) | v ⊆ e}.encard := by
+  simp
+  refine InjOn.encard_image ?_
+  unfold InjOn
+  intro a₁ h0
+  simp
+  intro a₂ h1 h2 h3
+  have h' : v ∪ (a₁ \ v) = v ∪ (a₂ \ v) := by grind
+  rw [Set.union_diff_cancel, Set.union_diff_cancel] at h'
+  · exact h'
+  · exact h2
+  exact h0.2
+
+end Hypergraph
