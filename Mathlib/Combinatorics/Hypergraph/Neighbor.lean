@@ -10,7 +10,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Combinatorics.Hypergraph.Basic
 
 /-!
-# Hypergraph neighbors and neighborhood hypergraphs
+# Neighborhood hypergraphs and vertex/hyperedge neighbors
 
 TODO
 -/
@@ -31,7 +31,7 @@ Viewing a simple graph as a 2-uniform hypergraph and a set as a 1-uniform hyperg
 recovers the simple graph notion of neighbourhood.
 -/
 @[simps]
-def neighbourhood (H : Hypergraph α) (v : Set α) : Hypergraph α where
+def neighborhood (H : Hypergraph α) (v : Set α) : Hypergraph α where
   vertexSet := V(H) \ v
   hyperedgeSet := {e | e ∈ E(H) ∧ v ⊆ e}.image (· \ v)
   hyperedge_isSubset_vertexSet' := by
@@ -40,15 +40,15 @@ def neighbourhood (H : Hypergraph α) (v : Set α) : Hypergraph α where
     refine diff_subset_diff_left ?_
     exact Membership.mem.subset_vertexSet he
 
-lemma mem_neighbourhood {v : Set α} :
-  e ∈ E(H.neighbourhood v) ↔ ∃ e' ∈ E(H), v ⊆ e' ∧ e' \ v = e := by
+lemma mem_neighborhood {v : Set α} :
+  e ∈ E(H.neighborhood v) ↔ ∃ e' ∈ E(H), v ⊆ e' ∧ e' \ v = e := by
   simp
   grind
 
 /-- An alternate description of the edges of the neighbourhood hypergraph. -/
-lemma mem_neighbourhood' {v e : Set α} :
-    e ∈ E(H.neighbourhood v) ↔ e ∪ v ∈ E(H) ∧ Disjoint e v := by
-  rw [mem_neighbourhood]
+lemma mem_neighborhood' {v e : Set α} :
+    e ∈ E(H.neighborhood v) ↔ e ∪ v ∈ E(H) ∧ Disjoint e v := by
+  rw [mem_neighborhood]
   constructor
   · rintro ⟨e, he, he', rfl⟩
     rw [diff_union_of_subset he']
@@ -63,7 +63,7 @@ lemma mem_neighbourhood' {v e : Set α} :
         exact Set.union_diff_cancel_right h
 
 lemma card_neighbourhood {v : Set α} :
-  E(H.neighbourhood v).encard = {e ∈ E(H) | v ⊆ e}.encard := by
+  E(H.neighborhood v).encard = {e ∈ E(H) | v ⊆ e}.encard := by
   simp
   refine InjOn.encard_image ?_
   unfold InjOn
@@ -75,5 +75,30 @@ lemma card_neighbourhood {v : Set α} :
   · exact h'
   · exact h2
   exact h0.2
+
+-- @[simp] lemma neighbourhood_isEmpty_iff [DecidableEq α] {v : Finset α} :
+--     (G.neighbourhood v).IsEmpty ↔ ∀ e ∈ G, ¬ v ⊆ e := by
+--   simp [IsEmpty, filter_eq_empty_iff]
+
+-- @[simp] lemma neighbourhood_isNonempty_iff [DecidableEq α] {v : Finset α} :
+--     (G.neighbourhood v).IsNonempty ↔ ∃ e ∈ G, v ⊆ e := by
+--   simp [← coe_nonempty_iff, filter_nonempty_iff]
+
+/--
+The `neighbors` of a vertex `x` in a hypergraph `H` are those vertices that share a hyperedge with
+`x`.
+
+We define this based on the `neighborhood` construction; the hyperedge set of the neighborhood
+hypergraph (`H.neighborhood {x}`) contains all neighbors of `x`.
+-/
+def neighbors (H : Hypergraph α) (x : α) : Set α := ⋃₀ E(H.neighborhood {x})
+
+/--
+The `neighbors` of a hyperedge `e` are those hyperedges that share at least one vertex with `e`,
+i.e., hyperedges that are "hyperedge adjacent" (using `Hyperedge.EAdj`) with `e`.
+-/
+def hyperedge_neighbors (H : Hypergraph α) (e : Set α) : Set (Set α) := {e' | H.EAdj e e'}
+
+-- TODO: lemmas
 
 end Hypergraph

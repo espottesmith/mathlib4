@@ -1,6 +1,17 @@
+/-
+Copyright (c) 2025 Evan Spotte-Smith, Bhavik Mehta. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Evan Spotte-Smith, Bhavik Mehta
+-/
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Card
 import Mathlib.Combinatorics.Hypergraph.Basic
+
+/-!
+# (Induced) subhypergraphs and partial hypergraphs
+
+TODO: this
+-/
 
 open Set
 
@@ -64,6 +75,6 @@ incident on at least one hyperedge in `E(Hˡ)`.
 def partialHypergraph (H : Hypergraph α) (l : Set (Set α)) : Hypergraph α where
   vertexSet := {x | ∃ e ∈ l, e ∈ E(H) ∧ x ∈ e}
   hyperedgeSet := l ∩ E(H)
-  hyperedge_isSubset_vertexSet q hq _ hx := ⟨q, hq.1, hq.2, hx⟩
+  hyperedge_isSubset_vertexSet' q hq _ hx := ⟨q, hq.1, hq.2, hx⟩
 
 end Hypergraph
