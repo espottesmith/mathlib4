@@ -16,7 +16,37 @@ import Mathlib.Combinatorics.Hypergraph.Basic
 /-!
 # Graph ↔ Hypergraph conversions
 
-TODO: this
+*Graphs* are a special case of hypergraphs; specifically, a graph is a 2-uniform hypergraph. This
+file defines some conversions from graph types (`SimpleGraph α`, `Graph α β`) to `Hypergraph α` and
+*vice versa*.
+
+## Main definitions
+
+`Coe` instances are provided for:
+* `(Graph α β) → (Hypergraph α)`, i.e., conversion from the special case to the more general case.
+  Note that this is actually a `CoeOut` instance, rather than a `Coe` instance, as the `β` type is
+  unspecified in the target. Further, `Graph` defines *multigraphs*, which can have repeated edges.
+  `Hypergraph α` does not allow duplicate hyperedges, so, where present, these are reduced to a
+  single hyperedge.
+* `(SimpleGraph α) → (Hypergraph α)`
+* `(Hypergraph α) → (Graph α (Sym2 α))`, i.e., the conversion from a hypergraph to its associated
+  *two-section graph* (also called a *representing graph*, *primal graph*, *Gaifman graph*, or
+  *clique graph*). The two-section graph of a hypergraph `H` contains edges for every pair of
+  vertices connected by some hyperedge in `H`. Note that the edge type is `Sym2 α`; an edge is
+  identified exactly by the (unordered) pair of vertices connected by the edge.
+* `(Hypergraph α) → (SimpleGraph α)`. This is similar to the (Hypergraph α) → (Graph α (Sym2 α))`
+  conversion above, except that edges are irreflexive, i.e., there can be no edge from `x : α` to
+  `x`. This means that loop hyperedges (those containing one vertex) are implicitly erased in this
+  conversion.
+
+In addition, we define
+
+toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α)
+
+## Implementation details
+
+
+
 -/
 
 open Set
@@ -173,6 +203,7 @@ instance : Coe (Hypergraph α) (SimpleGraph α) where
     )
 
 -- Hypergraph -> Bipartite SimpleGraph coersion
+-- TODO: prove that the resulting graph is actually bipartite
 def toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α) :=
   SimpleGraph.mk
   (
