@@ -11,7 +11,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Sym.Sym2
 import Mathlib.Combinatorics.Graph.Basic
 import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SipleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
 import Mathlib.Combinatorics.Hypergraph.Basic
 
 /-!
@@ -242,7 +242,7 @@ def toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α) :=
   (
     fun he he' ↦
       (he ≠ he' ∧ he ∈ E(H) ∧ ∃ x ∈ he, he' = {x}) ∨ (he' ≠ he ∧ he' ∈ E(H) ∧ ∃ x ∈ he', he = {x})
-      -- TODO: should this change to using ¬H.IsLoop he and ¬H.IsLoop he'
+      -- TODO: should this change to using ¬H.IsLoop he and ¬H.IsLoop he'?
       -- A bit more natural, but at the cost of making the proof of irreflexivity harder
   )
   (
@@ -269,11 +269,21 @@ def toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α) :=
 lemma toBipartiteSimpleGraph_isBipartiteWith_V_E :
   (H.toBipartiteSimpleGraph).IsBipartiteWith
     {V : Set α | ∃ x ∈ V(H), V = {x}}
-    {he | he ∈ E(H) ∧ ¬H.IsLoop he} := by
+    {he | he ∈ E(H) ∧ ¬H.IsLoop he} where
+    disjoint := by
+      apply Set.disjoint_left.mpr
+      simp
+      intro _ y _ _ _
+      unfold IsLoop
+      use y
+    mem_of_adj := by
+      simp
+      intro he he' hadj
+      unfold toBipartiteSimpleGraph at hadj
+      simp at hadj
       sorry
 
--- TODO: double-check and (if necessary) reformat this
 lemma toBipartiteSimpleGraph_isBipartite : (H.toBipartiteSimpleGraph).IsBipartite := by
-  exact IsBipartiteWith.isBipartite toBipartiteSimpleGraph_isBipartiteWith_V_E
+  exact SimpleGraph.IsBipartiteWith.isBipartite toBipartiteSimpleGraph_isBipartiteWith_V_E
 
 end Hypergraph
