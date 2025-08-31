@@ -23,11 +23,6 @@ file defines some conversions from graph types (`SimpleGraph α`, `Graph α β`)
 ## Main definitions
 
 `Coe` instances are provided for:
-* `(Graph α β) → (Hypergraph α)`, i.e., conversion from the special case to the more general case.
-  Note that this is actually a `CoeOut` instance, rather than a `Coe` instance, as the `β` type is
-  unspecified in the target. Further, `Graph` defines *multigraphs*, which can have repeated edges.
-  `Hypergraph α` does not allow duplicate hyperedges, so, where present, these are reduced to a
-  single hyperedge.
 * `(SimpleGraph α) → (Hypergraph α)`
 * `(Hypergraph α) → (Graph α (Sym2 α))`, i.e., the conversion from a hypergraph to its associated
   *two-section graph* (also called a *representing graph*, *primal graph*, *Gaifman graph*, or
@@ -39,14 +34,25 @@ file defines some conversions from graph types (`SimpleGraph α`, `Graph α β`)
   `x`. This means that loop hyperedges (those containing one vertex) are implicitly erased in this
   conversion.
 
-In addition, we define
+A `CoeOut` instance is also provided for `(Graph α β) → (Hypergraph α)`. This must be a `CoeOut`
+instance, rather than a `Coe` instance, as the `β` type is unspecified in the target. Further, note
+that `Graph` defines *multigraphs*, which can have repeated edges. `Hypergraph α` does not allow
+duplicate hyperedges, so, where present, these are reduced to a single hyperedge.
 
-toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α)
+Finally, we define the bipartite representation of a hypergraph:
+
+  `toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α)`
 
 ## Implementation details
 
-
-
+Vertices in the `toBipartiteSimpleGraph` `SimpleGraph` are of type `Set α` and are of two different
+natures: single-vertex sets ("vertex vertices", e.g., `{x}`), which represent the vertices of `H`,
+and multi-vertex sets ("hyperedge vertices"), which represent the (irreflexive, i.e., non-loop)
+hyperedges of `H`. Adjacency is defined such that a "vertex vertex" is adjacent to a hyperedge
+vertex if and only if the vertex `x ∈ V(H)` associated with the vertex vertex (`{x}`) is incident on
+the hyperedge associated with the hyperedge vertex; i.e., `x ∈ he`. Because this is a bipartite
+representation, vertex vertices are never adjacent to vertex vertices, and hyperedge vertices are
+never adjacent to hyperedge vertices.
 -/
 
 open Set
@@ -56,8 +62,13 @@ variable {G : Graph α β} {H : Hypergraph α} {S : SimpleGraph α}
 
 namespace Hypergraph
 
--- Graph -> Hypergraph coersion
--- Can't be Coe (I believe) because β type is totally unspecified
+/--
+Coersion from a Graph (`G : Graph α β`) to a Hypergraph (`H : Hypergraph α`). Because the `β` type
+is totally unspecified in the output (hypergraph) type, this can only be a `CoeOut` instance and not
+`Coe`.
+
+A graph is a special case of a hypergraph; specifically, graphs are 2-uniform hypergraphs.
+-/
 instance : CoeOut (Graph α β) (Hypergraph α) where
   coe G := Hypergraph.mk G.vertexSet { {x | G.Inc e' x} | e' ∈ G.edgeSet} (
     by
@@ -73,7 +84,12 @@ instance : CoeOut (Graph α β) (Hypergraph α) where
     exact hv
   )
 
--- SimpleGraph -> Hypergraph coersion
+/--
+Coersion from a `SimpleGraph` to a `Hypergraph`.
+
+A simple graph is a 2-uniform hypergraph with the added property that all (hyper)edges are not loops
+(i.e., `∀ he : Set α ∈ E(H), |he| > 1` ).
+-/
 instance [DecidableEq α] : Coe (SimpleGraph α) (Hypergraph α) where
   coe S := Hypergraph.mk
     {x | ∃ se ∈ S.edgeSet, Sym2.Mem x se}
@@ -98,7 +114,18 @@ instance [DecidableEq α] : Coe (SimpleGraph α) (Hypergraph α) where
       · exact hh' x'' hx''
     )
 
--- Hypergraph -> Graph (clique graph) coersion
+/--
+Coersion from a hypergraph `H` to a graph (`G : Graph α (Sym2 α)`), where `G` is the *clique graph*
+of `H`. Two vertices `x` and `y : α` are adjacent in `G` (i.e., there is an edge connecting `x` and
+`y`) if and only if they are adjacent in `H` (i.e., there exists a hyperedge in `H` containing both
+`x` and `y`).
+
+Edges in the output graph are represented by unordered pairs (`Sym2 α`) to facilitate the adjacency
+definition and the symmetry requirement of `Graph` edges.
+
+NOTE: the proofs of `G.edge_mem_iff_exists_isLink` and `G.left_mem_of_isLink` are rather long and,
+in places, repetitive. A refactor would be desirable.
+-/
 instance : Coe (Hypergraph α) (Graph α (Sym2 α)) where
   coe H := Graph.mk
     V(H)
@@ -180,7 +207,11 @@ instance : Coe (Hypergraph α) (Graph α (Sym2 α)) where
       exact he.2
     )
 
--- Hypergraph -> SimpleGraph coersion
+/--
+Coersion from a hypergraph to a simple graph. Because edges in a simple graph must be irreflexive,
+i.e., there can be no edge from `x : α` to `x`, loop hyperedges (those containing one vertex) are
+implicitly erased in this conversion.
+-/
 instance : Coe (Hypergraph α) (SimpleGraph α) where
   coe H := SimpleGraph.mk
     (fun x y ↦ x ≠ y ∧ (∃ e ∈ E(H), x ∈ e ∧ y ∈ e))
@@ -202,8 +233,9 @@ instance : Coe (Hypergraph α) (SimpleGraph α) where
       simp
     )
 
--- Hypergraph -> Bipartite SimpleGraph coersion
--- TODO: prove that the resulting graph is actually bipartite
+/--
+The bipartite graph representation of a hypergraph.
+-/
 def toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α) :=
   SimpleGraph.mk
   (
@@ -229,5 +261,7 @@ def toBipartiteSimpleGraph (H : Hypergraph α) : SimpleGraph (Set α) :=
     intro he
     simp
   )
+
+-- TODO: prove that the resulting graph is actually bipartite
 
 end Hypergraph
