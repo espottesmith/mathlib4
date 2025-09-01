@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 Evan Spotte-Smith. All rights reserved.
+Copyright (c) 2025 Evan Spotte-Smith, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Evan Spotte-Smith
+Authors: Evan Spotte-Smith, Bhavik Mehta
 -/
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Set.Card
@@ -18,8 +18,7 @@ contrast with a graph, where edges are unordered pairs of vertices, in hypergrap
 (unordered) sets of vertices; i.e., they are subsets of the vertex set `V`.
 
 A hypergraph where `V = ∅` and `E = ∅` is *empty*. A hypergraph with a nonempty
-vertex set (`V ≠ ∅`) and empty hyperedge set is *trivial*. A *complete hypergraph* is
-one where `E(H) = 𝒫 V(H)`, where `𝒫 V(H)` is the *power set* of the vertex set.
+vertex set (`V ≠ ∅`) and empty hyperedge set is *trivial*.
 
 If a hyperedge `e` contains only one vertex (i.e., `|e| = 1`), then it is a *loop*.
 
@@ -59,7 +58,7 @@ implementation.
 
 open Set
 
-variable {α : Type*} {x y : α} {e f g h : Set α} {l : Set (Set α)}
+variable {α β γ : Type*} {x y : α} {e e' f g : Set α} {l : Set (Set α)}
 
 /--
 An undirected hypergraph with vertices of type `α` and hyperedges of type `Set α`,
@@ -75,7 +74,7 @@ structure Hypergraph (α : Type*) where
   /-- The hyperedge set -/
   hyperedgeSet : Set (Set α)
   /-- All hyperedges must be subsets of the vertex set -/
-  hyperedge_isSubset_vertexSet : ∀ ⦃e⦄, e ∈ hyperedgeSet → e ⊆ vertexSet
+  hyperedge_isSubset_vertexSet' : ∀ ⦃e⦄, e ∈ hyperedgeSet → e ⊆ vertexSet
 
 namespace Hypergraph
 
@@ -90,19 +89,36 @@ scoped notation "V(" H ")" => Hypergraph.vertexSet H
 scoped notation "E(" H ")" => Hypergraph.hyperedgeSet H
 
 
-section Incidence
-
 /-! ## Vertex-Hyperedge Incidence -/
 
-lemma vertex_mem_if_mem_hyperedge {H : Hypergraph α} (h : ∃ e ∈ H.hyperedgeSet, x ∈ e) :
-x ∈ H.vertexSet := by
-  obtain ⟨e, he⟩ := h
-  have h1 : e ⊆ V(H) := by apply H.hyperedge_isSubset_vertexSet he.1
-  apply Set.mem_of_subset_of_mem h1 he.2
+@[simp]
+lemma hyperedge_isSubset_vertexSet (he : e ∈ E(H)) : e ⊆ V(H) :=
+  H.hyperedge_isSubset_vertexSet' he
 
-end Incidence
+lemma _root_.Membership.mem.subset_vertexSet (he : e ∈ E(H)) : e ⊆ V(H) :=
+  H.hyperedge_isSubset_vertexSet he
 
-section Adjacency
+lemma hyperedgeSet_subset_powerset_vertexSet {H : Hypergraph α} : E(H) ⊆ V(H).powerset := by
+  intro e (he : e ∈ E(H))
+  simpa using he.subset_vertexSet
+
+lemma mem_vertexSet_of_mem_hyperedgeSet (he : e ∈ E(H)) (hx : x ∈ e) : x ∈ V(H) := by
+  have h1 : e ⊆ V(H) := by apply H.hyperedge_isSubset_vertexSet he
+  apply Set.mem_of_subset_of_mem h1 hx
+
+/--
+If edges `e` and `e'` have the same vertices from `G`, then they have all the same vertices.
+This could be phrased as `e = e'`, but this formulation is more useful in combination with the `ext`
+tactic.
+-/
+lemma forall_of_forall_verts (he : e ∈ E(H)) (he' : e' ∈ E(H))
+    (h : ∀ x ∈ V(H), x ∈ e ↔ x ∈ e') : ∀ x, x ∈ e ↔ x ∈ e' :=
+  fun x ↦ ⟨fun y ↦ (h x (he.subset_vertexSet y)).1 y,
+  fun y ↦ (h x (he'.subset_vertexSet y)).2 y⟩
+
+lemma sUnion_hyperedgeSet_subset_vertexSet : ⋃₀ E(H) ⊆ V(H) := by
+  refine subset_powerset_iff.mp ?_
+  exact hyperedgeSet_subset_powerset_vertexSet
 
 /-! ## Vertex and Hyperedge Adjacency -/
 
@@ -116,7 +132,7 @@ the vertex set cannot be incident on any hyperedge.
 def Adj (H : Hypergraph α) (x : α) (y : α) : Prop :=
   ∃ e ∈ E(H), x ∈ e ∧ y ∈ e
 
-lemma Adj.symm {H : Hypergraph α} {x y : α} (h : H.Adj x y) : H.Adj y x := by
+lemma Adj.symm (h : H.Adj x y) : H.Adj y x := by
   unfold Adj at *
   obtain ⟨e, he⟩ := h
   use e
@@ -127,8 +143,7 @@ lemma Adj.symm {H : Hypergraph α} {x y : α} (h : H.Adj x y) : H.Adj y x := by
   · exact he.2.1
 
 -- Credit: Peter Nelson, Jun Kwon
-lemma hypergraph_adj_comm (x y) : H.Adj x y ↔ H.Adj y x :=
-  ⟨.symm, .symm⟩
+lemma hypergraph_adj_comm (x y : α) : H.Adj x y ↔ H.Adj y x := ⟨.symm, .symm⟩
 
 /--
 Predicate for (hyperedge) adjacency. Analogous to `Hypergraph.Adj`, hyperedges `e` and `f` are
@@ -151,35 +166,13 @@ lemma EAdj.symm {H : Hypergraph α} {e f : Set α} (h : H.EAdj e f) : H.EAdj f e
     · exact hv.2.2
     · exact hv.2.1
 
-lemma EAdj.inter_nonempty {H : Hypergraph α} {e f : Set α} (hef : H.EAdj e f) :
-(e ∩ f).Nonempty := by
-    unfold EAdj at *
-    have h' : ∃ x ∈ e, x ∈ f := by grind
-    apply Set.inter_nonempty.mpr h'
+lemma EAdj.inter_nonempty (hef : H.EAdj e f) : (e ∩ f).Nonempty := by
+  unfold EAdj at *
+  have h' : ∃ x ∈ e, x ∈ f := by grind
+  apply Set.inter_nonempty.mpr h'
 
 -- Credit: Peter Nelson, Jun Kwon
-lemma hypergraph_eadj_comm (e f) : H.EAdj e f ↔ H.EAdj f e :=
-  ⟨.symm, .symm⟩
-
-/--
-Neighbors of a vertex `x` in hypergraph `H`
-
-A vertex `y` is a neighbor of vertex `x` if there exists some hyperedge `e ∈ E(H)` where `x` and
-`y` are both incident on `e`, i.e., if the two vertices are adjacent (see `Hypergraph.Adj`)
--/
-def neighbors (H : Hypergraph α) (x : α) : Set α := {y | H.Adj x y}
-
-/--
-Neighbors of a hyperedge `e` in hypergraph `H`
-
-A hyperedge `f` is a neighbor of hyperedge `e` if there exists some vertex `x ∈ V(H)` where `x` is
-incident on both `e` and `f`, i.e., if the two hyperedges are adjacent (see `Hypergraph.EAdj`)
--/
-def hyperedgeNeighbors (H : Hypergraph α) (e : Set α) : Set (Set α) := {f | H.EAdj e f}
-
-end Adjacency
-
-section DefsPreds
+lemma hypergraph_eadj_comm (e f) : H.EAdj e f ↔ H.EAdj f e := ⟨.symm, .symm⟩
 
 /-! ## Basic Hypergraph Definitions & Predicates-/
 
@@ -197,29 +190,56 @@ def stars (H : Hypergraph α) : Set (Set (Set α)) :=
   {H.star x | x ∈ V(H)}
 
 /--
+The *image* of a hypergraph `H : Hypergraph α` under function `f : α → β` is `Hᶠ : Hypergraph β`.
+
+The vertex set of `Hᶠ` is the image of `V(H)` under `f`, and the hyperedge set of `Hᶠ` is the set
+of images of the hyperedges (subsets of vertices) in `E(H)`.
+-/
+@[simps]
+def image (H : Hypergraph α) (f : α → β) : Hypergraph β where
+  vertexSet := V(H).image f
+  hyperedgeSet := E(H).image (Set.image f)
+  hyperedge_isSubset_vertexSet' := by
+    simp
+    intro e he
+    have hev : e ⊆ V(H) := by exact Membership.mem.subset_vertexSet he
+    refine image_subset_iff.mp ?_
+    exact image_mono hev
+
+lemma mem_image {f : α → β} {e : Set β} : e ∈ E(H.image f) ↔ ∃ e' ∈ E(H), f '' e' = e := Iff.rfl
+
+lemma image_mem_image {f : α → β} (he : e ∈ E(H)) : e.image f ∈ E(H.image f) :=
+  mem_image_of_mem _ he
+
+lemma image_image {f : α → β} {g : β → γ} (H : Hypergraph α) :
+  (H.image f).image g = H.image (g ∘ f) := by
+    ext : 1
+    case vertexSet => simp [Set.image_image]
+    case hyperedgeSet => simp [Set.image_image]
+
+/--
 Predicate to determine if a vertex is isolated, meaning that it is not incident on any hyperedges.
 Note that this includes loops, i.e., if vertex `x` is isolated, there is no hyperedge with
 associated vertex subset `{x}`
 -/
 def IsIsolated (H : Hypergraph α) (x : α) : Prop := ∀ e ∈ E(H), x ∉ e
 
-lemma not_exists_isolated_vertex_iff_sUnion_hyperedgeSet_eq_vertexSet {H : Hypergraph α} :
-Set.sUnion E(H) = V(H) ↔ ∀ x ∈ V(H), ¬IsIsolated H x :=
-  Iff.intro
-  (by
-    unfold IsIsolated
-    intro h
-    grind
-  )
-  (by
-    unfold IsIsolated
-    intro h
-    have h' : ∀ x ∈ V(H), ∃ e ∈ E(H), x ∈ e := by grind
-    refine Subset.antisymm ?_ h'
-    apply Set.sUnion_subset
-    exact fun t' a ↦ H.hyperedge_isSubset_vertexSet a
-  )
-
+lemma not_exists_isolated_vertex_iff_sUnion_hyperedgeSet_eq_vertexSet :
+  ⋃₀ E(H) = V(H) ↔ ∀ x ∈ V(H), ¬IsIsolated H x :=
+    Iff.intro
+    (by
+      unfold IsIsolated
+      intro h
+      grind
+    )
+    (by
+      unfold IsIsolated
+      intro h
+      have h' : ∀ x ∈ V(H), ∃ e ∈ E(H), x ∈ e := by grind
+      refine Subset.antisymm ?_ h'
+      apply Set.sUnion_subset
+      exact fun t' a ↦ H.hyperedge_isSubset_vertexSet a
+    )
 
 /--
 Predicate to determine if a hyperedge `e` is a loop, meaning that its associated vertex subset `s`
@@ -227,10 +247,22 @@ contains only one vertex, i.e., `|s| = 1`
 -/
 def IsLoop (H : Hypergraph α) (e : Set α) : Prop := ∃ x ∈ V(H), e = {x}
 
+lemma isLoop_encard_one (h : H.IsLoop e) : Set.encard e = 1 := by
+  unfold IsLoop at h
+  refine encard_eq_one.mpr ?_
+  obtain ⟨x, hx⟩ := h
+  use x
+  exact hx.2
+
 /--
 Predicate to determine if a hypergraph is empty
 -/
 def IsEmpty (H : Hypergraph α) : Prop := V(H) = ∅ ∧ E(H) = ∅
+
+/--
+Predicate to determine if a hypergraph is nonempty
+-/
+def IsNonempty (H : Hypergraph α) : Prop := (∃ x, x ∈ V(H)) ∨ (∃ e, e ∈ E(H))
 
 /--
 The empty hypergraph of type α
@@ -245,12 +277,93 @@ def emptyHypergraph (α : Type*) : Hypergraph α :=
     exact Set.subset_empty_iff.mpr h1
   )
 
-lemma isEmpty_empty_hypergraph {α : Type*} : IsEmpty (Hypergraph.emptyHypergraph α) := by
+@[simp] lemma coe_nonempty : V(H).Nonempty → H.IsNonempty := by
+  unfold IsNonempty
+  unfold Set.Nonempty
+  exact fun a ↦ Or.symm (Or.inr a)
+
+lemma isEmpty_empty_hypergraph : IsEmpty (Hypergraph.emptyHypergraph α) := by
   unfold IsEmpty
   exact Prod.mk_inj.mp rfl
 
-lemma isEmpty_eq_empty_hypergraph {H : Hypergraph α} (h : H.IsEmpty) : H = emptyHypergraph α := by
-  exact Hypergraph.ext_iff.mpr h
+lemma isEmpty_eq_empty_hypergraph (h : H.IsEmpty) : emptyHypergraph α = H := by
+  unfold IsEmpty at h
+  have hv : V(emptyHypergraph α) = ∅ := rfl
+  have he : E(emptyHypergraph α) = ∅ := rfl
+  apply Hypergraph.ext_iff.mpr
+  rw [h.1, hv, h.2, he]
+  constructor
+  · exact hv
+  · exact he
+
+@[simp]
+lemma hyperedge_not_mem_empty : e ∉ E(emptyHypergraph α) :=
+  by exact fun a ↦ a
+
+lemma IsEmpty.eq (hH : H.IsEmpty) : V(H) = ∅ ∧ E(H) = ∅ := by exact hH
+
+lemma isEmpty_iff_forall_not_mem : H.IsEmpty ↔ (∀ x, x ∉ V(H)) ∧ (∀ e, e ∉ E(H)) := by
+  unfold IsEmpty
+  constructor
+  · intro h
+    constructor
+    · rw [h.1]
+      apply Set.notMem_empty
+    · rw [h.2]
+      apply Set.notMem_empty
+  · intro ho
+    constructor
+    · apply Set.eq_empty_iff_forall_notMem.mpr
+      apply ho.left
+    · apply Set.eq_empty_iff_forall_notMem.mpr
+      apply ho.right
+
+lemma IsEmpty.not_mem (hH : H.IsEmpty) {e : Set α} : e ∉ E(H) := by
+  unfold IsEmpty at hH
+  rw [hH.2]
+  exact fun a ↦ a
+
+lemma not_isEmpty : ¬H.IsEmpty ↔ H.IsNonempty := by
+  unfold IsEmpty
+  unfold IsNonempty
+  constructor
+  · intro h
+    rw [not_and_or] at h
+    cases h with
+    | inl v_nonempty => (
+      left
+      refine nonempty_def.mp ?_
+      exact nonempty_iff_ne_empty.mpr v_nonempty
+    )
+    | inr e_nonempty => (
+      right
+      refine nonempty_def.mp ?_
+      exact nonempty_iff_ne_empty.mpr e_nonempty
+    )
+  · intro h'
+    rw [not_and_or]
+    cases h' with
+    | inl v_nonempty => (
+      left
+      exact nonempty_iff_ne_empty.mp v_nonempty
+    )
+    | inr e_nonempty => (
+      right
+      exact nonempty_iff_ne_empty.mp e_nonempty
+    )
+
+lemma not_isNonempty : ¬H.IsNonempty ↔ H.IsEmpty :=
+  not_iff_comm.mp not_isEmpty
+
+alias ⟨_, IsEmpty.not_isNonempty⟩ := not_isNonempty
+alias ⟨_, IsNonempty.not_isEmpty⟩ := not_isEmpty
+
+variable (H) in
+lemma isEmpty_or_isNonempty : H.IsEmpty ∨ H.IsNonempty := by
+  unfold IsEmpty
+  unfold IsNonempty
+  grind
+
 
 /--
 Predicate to determine if a hypergraph is trivial
@@ -262,21 +375,25 @@ def IsTrivial (H : Hypergraph α) : Prop := Set.Nonempty V(H) ∧ E(H) = ∅
 /--
 A trivial hypergraph of type α with vertex set h
 -/
-def trivialHypergraph {α : Type*} (h : Set α) :=
+def trivialHypergraph (f : Set α) :=
   Hypergraph.mk
-  h
+  f
   ∅
   (by
     intro e he
     exact False.elim he
   )
 
-lemma not_isEmpty_trivial_hypergraph {H : Hypergraph α} (hh : IsTrivial H) : ¬IsEmpty H := by
+lemma not_isEmpty_trivial_hypergraph (hh : IsTrivial H) : ¬IsEmpty H := by
   unfold IsEmpty
   unfold IsTrivial at hh
   refine not_and_of_not_or_not ?_
   left
   apply Set.nonempty_iff_ne_empty.mp hh.1
+
+lemma hyperedge_not_mem_trivial (h : H.IsTrivial) : e ∉ E(H) := by
+    unfold IsTrivial at *
+    grind
 
 /--
 Predicate to determine is a hypergraph `H` is complete, meaning that each member of the power set of
@@ -285,133 +402,52 @@ the vertices (`𝒫 V(H)`) is represented in `E(H)`
 def IsComplete (H : Hypergraph α) : Prop := ∀ e ∈ 𝒫 V(H), e ∈ E(H)
 
 /--
-Predicate to determine if a hypergraph is simple
-
-A simple hypergraph is one in which, for each hyperedge `e ∈ E(H)` (with associated vertex subset
-`s : Set α`), there is no other hyperedge `f ∈ E(H)` (with associated vertex subset `t : Set α`)
-such that `s ⊂ t`.
+A complete hypergraph with vertex set f
 -/
-def IsSimple (H : Hypergraph α) : Prop := ∀ e ∈ E(H), ∀ f ∈ E(H) \ {e}, ¬e ⊆ f
+@[simps]
+def completeOn (f : Set α) : Hypergraph α where
+  vertexSet := f
+  hyperedgeSet := 𝒫 f
+  hyperedge_isSubset_vertexSet' := by simp
 
-end DefsPreds
+lemma mem_completeOn : e ∈ E(completeOn f) ↔ e ⊆ f := by
+  constructor
+  · exact fun a ↦ a
+  · exact fun a ↦ a
 
-section Card
+lemma isComplete_completeOn (f : Set α) : (completeOn f).IsComplete := by exact fun e a ↦ a
 
-/-! ## Cardinality -/
+lemma isComplete_not_isEmpty (h : H.IsComplete) : ¬ H.IsEmpty := by
+  unfold IsComplete at h
+  unfold IsEmpty
+  have h0 : ∅ ∈ 𝒫 V(H) := by
+    refine mem_powerset ?_
+    apply Set.empty_subset
+  apply not_and_or.mpr
+  right
+  grind
 
-/--
-The *order* of a hypergraph `H` is defined as the number of vertices contained in `H`
--/
-noncomputable def order (H : Hypergraph α) : ENat := Set.encard V(H)
+lemma completeOn_isNonempty {S : Set α} : (completeOn S).IsNonempty := by
+  have h : E(completeOn S) = 𝒫 S := rfl
+  have h' : ∅ ∈ E(completeOn S) := by
+    refine mem_completeOn.mpr ?_
+    apply Set.empty_subset
+  unfold IsNonempty
+  right
+  use ∅
 
-/--
-The *size* of a hypergraph `H` is defined as the number of hyperedges contained in `H`
--/
-noncomputable def size (H : Hypergraph α) : ENat := Set.encard E(H)
+lemma isComplete_not_isTrivial (h : H.IsComplete) : ¬H.IsTrivial := by
+  unfold IsComplete at h
+  unfold IsTrivial
+  have h' : ∅ ∈ E(H) := by grind
+  apply not_and_or.mpr
+  right
+  exact ne_of_mem_of_not_mem' h' fun a ↦ a
 
-/--
-Predicate to determine if a hypergraph is *`k`-uniform*.
-
-In a `k`-uniform hypergraph `H`, all hyperedges `e ∈ E(H)` have the same cardinality, i.e.,
-`|e| = k`.
--/
-def IsKUniform (H : Hypergraph α) (k : ℕ) : Prop := ∀ e ∈ E(H), Set.ncard e = k
-
-/--
-Predicate to determine if a hypergraph is *`d`-regular*.
-
-In a `d`-regular hypergraph `H`, all vertices `v ∈ V(H)` have the same degree, i.e., all vertices
-are incident on `d` hyperedges.
--/
-def IsDRegular (H : Hypergraph α) (d : ℕ) : Prop := ∀ l ∈ H.stars, Set.ncard l = d
-
-/--
-The *degree* of a vertex in a hypergraph `H`.
-
-A vertex `x` has degree `n`, where `n` is the number of hyperedges in `E(H)` that `x` is incident
-on.
--/
-noncomputable def vertexDegree (H : Hypergraph α) (x : α) : ENat := Set.encard (H.star x)
-
-/--
-The set of vertex *degrees* of a hypergraph `H`.
--/
-noncomputable def vertexDegrees (H : Hypergraph α) : Set ENat := {H.vertexDegree x | x ∈ V(H)}
-
-/--
-The *degree* of a hyperedge in hypergraph `H`.
-
-A hyperedge `e` has degree `n`, where `n` is the number of vertices in `V(H)` that are incident on
-`e`.
--/
-noncomputable def hyperedgeDegree (_ : Hypergraph α) (e : Set α) : ENat := Set.encard e
-
-/--
-The set of hyperedge *degrees* of a hypergraph `H`.
--/
-noncomputable def hyperedgeDegrees (H : Hypergraph α) : Set ENat := {H.hyperedgeDegree e | e ∈ E(H)}
-
-end Card
-
-section Sub
-/-! ## Subhypergraphs, Partial Hypergraphs, and Section Hypergraphs -/
-
-/--
-Given a subset of the vertex set `g ⊆ V(H)` of a hypergraph `H`, the
-*subhypergraph* `Hg` has `V(Hg) = g ∩ V(H)`, and `E(Hg)` is the subset of `E(H)` for which all
-incident vertices are included in `g`.
--/
-def subHypergraph (H : Hypergraph α) (g : Set α) :=
-  Hypergraph.mk
-  (g ∩ V(H))
-  {e | e ∈ E(H) ∧ e ⊆ g}
-  (by
-    intro f hf
-    have h0 : f ∈ {e | e ∈ E(H) ∧ e ⊆ g} → f ∈ E(H) ∧ f ⊆ g := by apply Set.mem_sep_iff.mp
-    have h1 : f ∈ E(H) ∧ f ⊆ g → f ⊆ V(H) ∧ f ⊆ g := by
-      intro q
-      have h1' : f ∈ E(H) := by exact q.left
-      have h1'' : f ⊆ V(H) := by apply H.hyperedge_isSubset_vertexSet h1'
-      constructor
-      exact h1''
-      exact q.right
-    have h2 : f ⊆ V(H) ∧ f ⊆ g → f ⊆ V(H) ∩ g := by exact Set.subset_inter_iff.mpr
-    apply h0 at hf
-    apply h1 at hf
-    apply h2 at hf
-    rw [Set.inter_comm g V(H)]
-    exact hf
-  )
-
-/--
-Given a subset of the vertex set `g ⊆ V(H)` of a hypergraph `H`,the *induced subhypergraph*
-`Hg'` has `V(Hg') = g ∩ V(H)` and `E(Hg')` contains the subset of each hyperedge that intersects
-with `g`.
--/
-def inducedSubHypergraph (H : Hypergraph α) (g : Set α) :=
-  Hypergraph.mk
-  (g ∩ V(H))
-  { { y | y ∈ (g ∩ e)} | e ∈ E(H) }
-  (by
-    intro q hq
-    have h0 : ∃ e ∈ E(H), {y | y ∈ g ∩ e} = q := by exact hq
-    obtain ⟨e, he⟩ := h0
-    have h1 : e ⊆ V(H) := by exact H.hyperedge_isSubset_vertexSet he.left
-    have h2 : q = {y | y ∈ g ∩ e} := by apply Eq.symm he.2
-    have h3 : g ∩ e ⊆ g ∩ V(H) := by exact inter_subset_inter (fun ⦃a⦄ a ↦ a) h1
-    exact Eq.trans_subset h2 h3
-  )
-
-/--
-Given a subset of the hyperedge set `E(H)` of a hypergraph `H` (`l : Set (Set α)`), the
-*partial hypergraph* `Hˡ` has `E(Hˡ) = l ∩ E(H)` and `V(Hˡ)` is the subset of `V(H)` which is
-incident on at least one hyperedge in `E(Hˡ)`.
--/
-def partialHypergraph (H : Hypergraph α) (l : Set (Set α)) : Hypergraph α where
-  vertexSet := {x | ∃ e ∈ l, e ∈ E(H) ∧ x ∈ e}
-  hyperedgeSet := l ∩ E(H)
-  hyperedge_isSubset_vertexSet q hq _ hx := ⟨q, hq.1, hq.2, hx⟩
-
-end Sub
+lemma completeOn_not_isTrivial {S : Set α} : ¬(completeOn S).IsTrivial := by
+  unfold IsTrivial
+  apply not_and_or.mpr
+  right
+  exact ne_of_mem_of_not_mem' (fun ⦃a⦄ a ↦ a) fun a ↦ a
 
 end Hypergraph
