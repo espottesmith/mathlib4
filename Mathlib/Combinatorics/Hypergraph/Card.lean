@@ -184,20 +184,44 @@ lemma isDRegular_right_unique {d d' : ENat} (hH : V(H).Nonempty)
   have hxd' : H.vertexDegree x = d' := by apply hd' x hx
   rw [hxd.symm, hxd'.symm]
 
--- lemma isDRegular_iff_eq_of_isNonempty {k k' : ENat} (hH : E(H).Nonempty) (hHk : H.IsDRegular d) :
---     H.IsDRegular d' ↔ k' = k := ⟨(.symm <| isDRegular_right_unique hH hHk ·), (· ▸ hHk)⟩
+lemma isDRegular_iff_eq_of_isNonempty {d d' : ENat} (hH : V(H).Nonempty) (hHd : H.IsDRegular d) :
+    H.IsDRegular d' ↔ d' = d := ⟨(.symm <| isDRegular_right_unique hH hHd ·), (· ▸ hHd)⟩
 
--- @[simp] lemma emptyHypergraph_isDRegular : (emptyHypergraph α).IsDRegular d := by
---   apply IsEmpty.isDRegular isEmpty_empty_hypergraph
+@[simp] lemma emptyHypergraph_isDRegular : (emptyHypergraph α).IsDRegular d := by
+  apply IsEmpty.isDRegular isEmpty_empty_hypergraph
 
--- lemma trivial_isDRegular : (trivialHypergraph f).IsDRegular d := by simp [IsDRegular]
+lemma trivial_isDRegular : (trivialHypergraph f).IsDRegular 0 := by
+  have hf : f = ∅ ∨ f.Nonempty := by exact Set.eq_empty_or_nonempty f
+  cases hf with
+  | inl fempty => (
+      have hempty : (trivialHypergraph f).IsEmpty := by
+        simp
+        rw [fempty]
+        exact Set.notMem_empty
+      exact IsEmpty.isDRegular hempty
+  )
+  | inr fnonempty => (
+      have htriv : (trivialHypergraph f).IsTrivial := by
+        apply isTrivial_trivialHypergraph_nonempty fnonempty
+      unfold IsDRegular
+      intro x hx
+      have hstar : (trivialHypergraph f).star x = ∅ := by
+        unfold star
+        simp [*]
+      unfold vertexDegree
+      simp
+      exact hstar
+  )
 
--- lemma IsDRegular.le_card_verts (hE : E(H).Nonempty) (hH : H.IsDRegular d) : k ≤ H.order := by
---   obtain ⟨e, he⟩ := hE
---   unfold IsDRegular at hH
---   unfold order
---   rw [←hH e]
---   · apply encard_le_encard (H.edge_isSubset_vertexSet he)
---   · exact he
+lemma IsDRegular.le_card_edges (hV : V(H).Nonempty) (hH : H.IsDRegular d) : d ≤ H.size := by
+  obtain ⟨x, hx⟩ := hV
+  unfold IsDRegular at hH
+  unfold size
+  rw [←hH x]
+  · unfold vertexDegree
+    unfold star
+    have hsub : {e | e ∈ E(H) ∧ x ∈ e} ⊆ E(H) := by exact sep_subset E(H) fun x_1 ↦ x ∈ x_1
+    exact Set.encard_le_encard hsub
+  · exact hx
 
 end Hypergraph

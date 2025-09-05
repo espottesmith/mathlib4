@@ -314,6 +314,11 @@ def trivialHypergraph (f : Set α) :=
     exact False.elim he
   )
 
+lemma isTrivial_trivialHypergraph_nonempty (hf : f.Nonempty) : (trivialHypergraph f).IsTrivial := by
+  unfold IsTrivial
+  simp
+  exact hf
+
 lemma not_isEmpty_trivial_hypergraph (hh : IsTrivial H) : ¬IsEmpty H := by
   grind [IsEmpty, IsTrivial, Set.nonempty_iff_ne_empty]
 
