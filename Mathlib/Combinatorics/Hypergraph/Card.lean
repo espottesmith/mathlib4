@@ -108,7 +108,7 @@ lemma isKUniform_iff_forall_edgeDegrees : H.IsKUniform k ↔ ∀ n ∈ H.edgeDeg
     exact hnk (edgeDegree e) heD
 
 @[simp]
-lemma IsUniform.card_of_mem (hH : H.IsKUniform k) (he : e ∈ E(H)) : Set.encard e = k := by
+lemma IsKUniform.card_of_mem (hH : H.IsKUniform k) (he : e ∈ E(H)) : Set.encard e = k := by
   unfold IsKUniform at hH
   unfold edgeDegree at hH
   grind
@@ -151,5 +151,53 @@ are incident to `d` edges.
 def IsDRegular (H : Hypergraph α) (d : ENat) : Prop := ∀ x ∈ V(H), H.vertexDegree x = d
 
 variable {d : ENat}
+
+lemma isDRegular_iff_forall : H.IsDRegular d ↔ ∀ ⦃x⦄, x ∈ V(H) → H.vertexDegree x = d := Iff.rfl
+
+@[simp]
+lemma isDRegular_iff_forall_vertexDegrees : H.IsDRegular d ↔ ∀ n ∈ H.vertexDegrees, n = d := by
+  unfold IsDRegular
+  constructor
+  · intro hek n hn
+    unfold vertexDegrees at hn
+    have hn' : ∃ x ∈ V(H), H.vertexDegree x = n := by exact hn
+    obtain ⟨e, he⟩ := hn'
+    grind
+  · intro hnk x hxV
+    unfold edgeDegrees at hnk
+    have heD : (H.vertexDegree x) ∈ {n | ∃ x ∈ V(H), H.vertexDegree x = n} := by
+      simp
+      use x
+    exact hnk (H.vertexDegree x) heD
+
+@[simp]
+lemma IsUniform.card_of_mem (hH : H.IsDRegular d) (hx : x ∈ V(H)) : H.vertexDegree x = d := by
+  grind [IsDRegular]
+
+lemma IsEmpty.isDRegular (hH : H.IsEmpty) : H.IsDRegular d := by grind [IsDRegular, IsEmpty]
+
+lemma isDRegular_right_unique {d d' : ENat} (hH : V(H).Nonempty)
+  (hd : H.IsDRegular d) (hd' : H.IsDRegular d') : d = d' := by
+  obtain ⟨x, hx⟩ := hH
+  unfold IsDRegular at *
+  have hxd : H.vertexDegree x = d := by apply hd x hx
+  have hxd' : H.vertexDegree x = d' := by apply hd' x hx
+  rw [hxd.symm, hxd'.symm]
+
+-- lemma isDRegular_iff_eq_of_isNonempty {k k' : ENat} (hH : E(H).Nonempty) (hHk : H.IsDRegular d) :
+--     H.IsDRegular d' ↔ k' = k := ⟨(.symm <| isDRegular_right_unique hH hHk ·), (· ▸ hHk)⟩
+
+-- @[simp] lemma emptyHypergraph_isDRegular : (emptyHypergraph α).IsDRegular d := by
+--   apply IsEmpty.isDRegular isEmpty_empty_hypergraph
+
+-- lemma trivial_isDRegular : (trivialHypergraph f).IsDRegular d := by simp [IsDRegular]
+
+-- lemma IsDRegular.le_card_verts (hE : E(H).Nonempty) (hH : H.IsDRegular d) : k ≤ H.order := by
+--   obtain ⟨e, he⟩ := hE
+--   unfold IsDRegular at hH
+--   unfold order
+--   rw [←hH e]
+--   · apply encard_le_encard (H.edge_isSubset_vertexSet he)
+--   · exact he
 
 end Hypergraph
