@@ -10,6 +10,16 @@ import Mathlib.Combinatorics.Hypergraph.Basic
 /-!
 # Hypergraph cardinality
 
+## Main definitions
+
+For `H : Hypergraph α`:
+
+* `H.order` denotes the number of vertices in `H`
+* `H.size` denotes the number of edges in `H`
+* `H.vertexDegree x` denotes the cardinality of the star of a vertex `x : α`
+* `H.edgeDegree e` denotes the cardinality of the edge `e : Set α`
+* `H.IsKUniform` states that a hypergraph `H` is *`k`-uniform*, meaning that
+* `H.IsDRegular` states that a hypergraph `H` is *`d`-regular*, meaning that
 
 -/
 
@@ -27,14 +37,14 @@ The *order* of a hypergraph `H` is defined as the number of vertices contained i
 noncomputable def order (H : Hypergraph α) : ENat := Set.encard V(H)
 
 /--
-The *size* of a hypergraph `H` is defined as the number of hyperedges contained in `H`
+The *size* of a hypergraph `H` is defined as the number of edges contained in `H`
 -/
 noncomputable def size (H : Hypergraph α) : ENat := Set.encard E(H)
 
 /--
 The *degree* of a vertex in a hypergraph `H`.
 
-A vertex `x` has degree `n`, where `n` is the number of hyperedges in `E(H)` that `x` is incident
+A vertex `x` has degree `n`, where `n` is the number of edges in `E(H)` that `x` is incident
 on.
 -/
 noncomputable def vertexDegree (H : Hypergraph α) (x : α) : ENat := Set.encard (H.star x)
@@ -45,31 +55,31 @@ The set of vertex *degrees* of a hypergraph `H`.
 noncomputable def vertexDegrees (H : Hypergraph α) : Set ENat := {H.vertexDegree x | x ∈ V(H)}
 
 /--
-The *degree* of a hyperedge in hypergraph `H`.
+The *degree* of a edge in hypergraph `H`.
 
-A hyperedge `e` has degree `n`, where `n` is the number of vertices in `V(H)` that are incident on
+A edge `e` has degree `n`, where `n` is the number of vertices in `V(H)` that are incident to
 `e`.
 -/
-noncomputable def hyperedgeDegree (e : Set α) : ENat := Set.encard e
+noncomputable def edgeDegree (e : Set α) : ENat := Set.encard e
 
 /--
-The set of hyperedge *degrees* of a hypergraph `H`.
+The set of edge *degrees* of a hypergraph `H`.
 -/
-noncomputable def hyperedgeDegrees (H : Hypergraph α) : Set ENat := {hyperedgeDegree e | e ∈ E(H)}
+noncomputable def edgeDegrees (H : Hypergraph α) : Set ENat := {edgeDegree e | e ∈ E(H)}
 
 /--
 Predicate to determine if a hypergraph is *`k`-uniform*.
 
-In a `k`-uniform hypergraph `H`, all hyperedges `e ∈ E(H)` have the same cardinality, i.e.,
+In a `k`-uniform hypergraph `H`, all edges `e ∈ E(H)` have the same cardinality, i.e.,
 `|e| = k`.
 -/
-def IsKUniform (H : Hypergraph α) (k : ℕ) : Prop := ∀ e ∈ E(H), hyperedgeDegree e = k
+def IsKUniform (H : Hypergraph α) (k : ℕ) : Prop := ∀ e ∈ E(H), edgeDegree e = k
 
 /--
 Predicate to determine if a hypergraph is *`d`-regular*.
 
 In a `d`-regular hypergraph `H`, all vertices `v ∈ V(H)` have the same degree, i.e., all vertices
-are incident on `d` hyperedges.
+are incident to `d` edges.
 -/
 def IsDRegular (H : Hypergraph α) (d : ℕ) : Prop := ∀ x ∈ V(H), H.vertexDegree x = d
 
