@@ -35,7 +35,7 @@ TODO
 
 open Set
 
-variable {α : Type*} {x y : α} {e f g h : Set α} {l : Set (Set α)}
+variable {α β : Type*} {x y : α} {e f g h : Set α} {l : Set (Set α)}
 
 namespace Hypergraph
 
@@ -89,7 +89,23 @@ def IsKUniform (H : Hypergraph α) (k : ENat) : Prop := ∀ e ∈ E(H), edgeDegr
 
 variable {k : ENat}
 
-lemma isUniform_iff_forall : H.IsKUniform k ↔ ∀ ⦃e⦄, e ∈ E(H) → Set.encard e = k := Iff.rfl
+lemma isKUniform_iff_forall : H.IsKUniform k ↔ ∀ ⦃e⦄, e ∈ E(H) → Set.encard e = k := Iff.rfl
+
+@[simp]
+lemma isKUniform_iff_forall_edgeDegrees : H.IsKUniform k ↔ ∀ n ∈ H.edgeDegrees, n = k := by
+  unfold IsKUniform
+  constructor
+  · intro hek n hn
+    unfold edgeDegrees at hn
+    have hn' : ∃ e ∈ E(H), edgeDegree e = n := by exact hn
+    obtain ⟨e, he⟩ := hn'
+    grind
+  · intro hnk e heE
+    unfold edgeDegrees at hnk
+    have heD : (edgeDegree e) ∈ {x | ∃ e ∈ E(H), edgeDegree e = x} := by
+      simp
+      use e
+    exact hnk (edgeDegree e) heD
 
 @[simp]
 lemma IsUniform.card_of_mem (hH : H.IsKUniform k) (he : e ∈ E(H)) : Set.encard e = k := by
@@ -118,42 +134,13 @@ lemma isKUniform_iff_eq_of_isNonempty {k k' : ENat} (hH : E(H).Nonempty) (hHk : 
 
 lemma trivial_isKUniform : (trivialHypergraph f).IsKUniform k := by simp [IsKUniform]
 
-lemma IsUniform.le_card_verts (hE : E(H).Nonempty) (hH : H.IsKUniform k) : k ≤ H.order := by
+lemma IsKUniform.le_card_verts (hE : E(H).Nonempty) (hH : H.IsKUniform k) : k ≤ H.order := by
   obtain ⟨e, he⟩ := hE
   unfold IsKUniform at hH
   unfold order
   rw [←hH e]
   · apply encard_le_encard (H.edge_isSubset_vertexSet he)
   · exact he
-
--- lemma isUniform_iff_isEmpty_of_card_verts_lt (hr : #G.verts < r) :
---     G.IsUniform r ↔ G.IsEmpty :=
---   ⟨fun h ↦ not_isNonempty.1 fun h' ↦ hr.not_le (h.le_card_verts h'), (·.isUniform)⟩
-
--- @[simp] lemma completeUniformOn_isUniform {s : Finset α} : (completeUniformOn s r).IsUniform r := by
---   simp_all [isUniform_iff_forall]
-
--- lemma IsUniform.image [DecidableEq β] {f : α → β} (hG : G.IsUniform r) (hf : Set.InjOn f G.verts) :
---     (G.image f).IsUniform r := by
---   intro e he
---   simp only [mem_image] at he
---   obtain ⟨e', he', rfl⟩ := he
---   rw [card_image_of_injOn, hG he']
---   exact hf.mono (edge_subset_verts he')
-
--- lemma IsUniform.of_image [DecidableEq β] {f : α → β} (hG : (G.image f).IsUniform r)
---     (hf : Set.InjOn f G.verts) :
---     G.IsUniform r := by
---   intro e he
---   rw [← hG (image_mem_image he), card_image_of_injOn (hf.mono (edge_subset_verts he))]
-
--- lemma isUniform_image_iff [DecidableEq β] {f : α → β} (hf : Set.InjOn f G.verts) :
---     (G.image f).IsUniform r ↔ G.IsUniform r :=
---   ⟨(IsUniform.of_image · hf), (IsUniform.image · hf)⟩
-
--- @[simp] lemma isUniform_image_embedding_iff [DecidableEq β] (f : α ↪ β) :
---     (G.image f).IsUniform r ↔ G.IsUniform r :=
---   isUniform_image_iff f.injective.injOn
 
 /--
 Predicate to determine if a hypergraph is *`d`-regular*.
