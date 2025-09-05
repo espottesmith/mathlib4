@@ -10,6 +10,10 @@ import Mathlib.Combinatorics.Hypergraph.Basic
 /-!
 # Hypergraph cardinality
 
+This module defines notions of cardinality for undirected hypergraphs, as well as special classes
+of hypergraphs defined by some pattern of cardinality (e.g., *`k`-uniform* and *`d`-regular*
+hypergraphs; see below).
+
 ## Main definitions
 
 For `H : Hypergraph α`:
@@ -18,8 +22,14 @@ For `H : Hypergraph α`:
 * `H.size` denotes the number of edges in `H`
 * `H.vertexDegree x` denotes the cardinality of the star of a vertex `x : α`
 * `H.edgeDegree e` denotes the cardinality of the edge `e : Set α`
-* `H.IsKUniform` states that a hypergraph `H` is *`k`-uniform*, meaning that
-* `H.IsDRegular` states that a hypergraph `H` is *`d`-regular*, meaning that
+* `H.IsKUniform` states that a hypergraph `H` is *`k`-uniform*, meaning that all edges in the edge
+    set of `H` have degree (or, equivalently, cardinality) `k`
+* `H.IsDRegular` states that a hypergraph `H` is *`d`-regular*, meaning that all vertices in the
+    vertex set of `H` have degree `d`
+
+## Implementation details
+
+TODO
 
 -/
 
@@ -28,6 +38,8 @@ open Set
 variable {α : Type*} {x y : α} {e f g h : Set α} {l : Set (Set α)}
 
 namespace Hypergraph
+
+variable {H : Hypergraph α}
 
 /-! ## Undirected Hypergraph Cardinality -/
 
@@ -75,6 +87,12 @@ In a `k`-uniform hypergraph `H`, all edges `e ∈ E(H)` have the same cardinalit
 -/
 def IsKUniform (H : Hypergraph α) (k : ℕ) : Prop := ∀ e ∈ E(H), edgeDegree e = k
 
+variable {k : ℕ}
+
+lemma isUniform_iff_forall : H.IsKUniform k ↔ ∀ ⦃e⦄, e ∈ E(H) → Set.encard e = k := Iff.rfl
+
+lemma isUniform_iff_sized : H.IsKUniform k ↔ (G.edges : Set (Finset α)).Sized r := Iff.rfl
+
 /--
 Predicate to determine if a hypergraph is *`d`-regular*.
 
@@ -82,5 +100,7 @@ In a `d`-regular hypergraph `H`, all vertices `v ∈ V(H)` have the same degree,
 are incident to `d` edges.
 -/
 def IsDRegular (H : Hypergraph α) (d : ℕ) : Prop := ∀ x ∈ V(H), H.vertexDegree x = d
+
+variable {d : ℕ}
 
 end Hypergraph
