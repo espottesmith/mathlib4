@@ -26,11 +26,6 @@ For `H : Hypergraph α`:
     set of `H` have degree (or, equivalently, cardinality) `k`
 * `H.IsDRegular` states that a hypergraph `H` is *`d`-regular*, meaning that all vertices in the
     vertex set of `H` have degree `d`
-
-## Implementation details
-
-TODO
-
 -/
 
 open Set
