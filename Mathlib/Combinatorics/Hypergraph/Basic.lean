@@ -221,6 +221,14 @@ lemma not_exists_isolated_vertex_iff_sUnion_edgeSet_eq_vertexSet :
       exact fun t' a ↦ H.edge_isSubset_vertexSet a
     )
 
+@[simp]
+lemma IsIsolated.not_selfAdj : H.IsIsolated x ↔ ¬H.Adj x x := by
+  constructor
+  · intro hiso
+    grind [IsIsolated, Adj]
+  · intro hnadj
+    grind [IsIsolated, Adj]
+
 /--
 Predicate to determine if a edge `e` is a loop, meaning that its associated vertex subset `s`
 contains only one vertex, i.e., `|s| = 1`
