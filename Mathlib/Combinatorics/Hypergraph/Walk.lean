@@ -36,11 +36,9 @@ def IsWalk (H : Hypergraph α) : List (α × Set α) → Prop
   | (_, e) :: [] => e = ∅
   | (x, e) :: (y, e') :: W => e ∈ E(H) ∧ x ∈ e ∧ y ∈ e ∧ x ≠ y ∧ H.IsWalk ((y, e') :: W)
 
-/--
-TODO
--/
+
 @[ext]
-structure Walk (α : Type*) where
+structure WalkStruct (α : Type*) where
   -- The hypergraph on which this walk exists
   H : Hypergraph α
   -- The steps of the walk. The starting point (final element) must have associated edge ∅
@@ -48,9 +46,28 @@ structure Walk (α : Type*) where
   -- The flags must form a valid sequence of adjacency-based steps
   flags_isWalk : H.IsWalk flags
 
+inductive Walk : α → α → Type u
+  | nil {x : α} : Walk x x
+  | cons {x y z : α} {e : Set α} (he : e ∈ E(H))
+    (hx : x ∈ e) (hy : y ∈ e) (hxy : x ≠ y) (p : Walk y z) : Walk x z
+
+instance : DecidableEq Walk
+
+attribute [refl] Walk.nil
+
+@[simps]
+instance Walk.instInhabited (x : α) : Inhabited (H.Walk x x) := ⟨Walk.nil⟩
+
 namespace Walk
 
-variable {W W' : Walk α}
+/-- Pattern to get `Walk.nil` with the vertex as an explicit argument. -/
+@[match_pattern]
+abbrev nil' (x : α) : H.Walk x x := Walk.nil
+
+/-- Pattern to get `Walk.cons` with the vertices and connecting edge as explicit arguments. -/
+@[match_pattern]
+abbrev cons' (x y z : α) (e : Set α) (he : e ∈ E(H)) (hx : x ∈ e) (hy : y ∈ e) (hxy : x ≠ y)
+  (p : H.Walk y z) : H.Walk x z := Walk.cons he hx hy hxy p
 
 end Walk
 
