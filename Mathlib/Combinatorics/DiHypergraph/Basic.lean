@@ -107,6 +107,14 @@ structure NonEndlessDiHypergraph (α : Type*) extends DiHypergraph α where
 
 namespace DiHypergraph
 
--- TODO: you are here
+variable {Dₕ Dₕ' : DiHypergraph α}
+
+/-! ## Notation -/
+
+/-- `V(H)` denotes the `vertexSet` of a dihypergraph `Dₕ` -/
+scoped notation "V(" Dₕ ")" => DiHypergraph.vertexSet Dₕ
+
+/-- `E(H)` denotes the `edgeSet` of a hypergraph `H` -/
+scoped notation "E(" Dₕ ")" => Hypergraph.hyperedgeSet H
 
 end DiHypergraph
