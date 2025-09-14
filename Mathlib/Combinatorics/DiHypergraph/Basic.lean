@@ -107,6 +107,28 @@ lemma mem_vertexSet_of_mem_edgeSet_dst (he : e ∈ E(Dₕ)) (hx : x ∈ e.2) : x
   mem_vertexSet_of_mem_edgeSet_src_dst he (by right; exact hx)
 
 /--
+If the tails of edges `e` and `e'` have the same vertices from `Dₕ`, then they have all the same
+vertices.
+-/
+lemma forall_of_forall_verts_src (he : e ∈ E(Dₕ)) (hf : f ∈ E(Dₕ))
+    (h : ∀ x ∈ V(Dₕ), x ∈ e.1 ↔ x ∈ f.1) : ∀ x, x ∈ e.1 ↔ x ∈ f.1 := by
+     intro x
+     constructor
+     · grind [src_isSubset_vertexSet, mem_vertexSet_of_mem_edgeSet_src]
+     · grind [src_isSubset_vertexSet, mem_vertexSet_of_mem_edgeSet_src]
+
+/--
+If the tails of edges `e` and `e'` have the same vertices from `Dₕ`, then they have all the same
+vertices.
+-/
+lemma forall_of_forall_verts_dst (he : e ∈ E(Dₕ)) (hf : f ∈ E(Dₕ))
+    (h : ∀ x ∈ V(Dₕ), x ∈ e.2 ↔ x ∈ f.2) : ∀ x, x ∈ e.2 ↔ x ∈ f.2 := by
+     intro x
+     constructor
+     · grind [dst_isSubset_vertexSet, mem_vertexSet_of_mem_edgeSet_dst]
+     · grind [dst_isSubset_vertexSet, mem_vertexSet_of_mem_edgeSet_dst]
+
+/--
 The *tail star* of a vertex `x` is the set of all tails of edges `e ∈ E(Dₕ)` where `x` is in the
 tail of `e`.
 -/
