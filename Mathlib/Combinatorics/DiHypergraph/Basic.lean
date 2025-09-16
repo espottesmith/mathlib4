@@ -118,7 +118,7 @@ lemma forall_of_forall_verts_src (he : e ∈ E(Dₕ)) (hf : f ∈ E(Dₕ))
      · grind [src_isSubset_vertexSet, mem_vertexSet_of_mem_edgeSet_src]
 
 /--
-If the tails of edges `e` and `e'` have the same vertices from `Dₕ`, then they have all the same
+If the heads of edges `e` and `e'` have the same vertices from `Dₕ`, then they have all the same
 vertices.
 -/
 lemma forall_of_forall_verts_dst (he : e ∈ E(Dₕ)) (hf : f ∈ E(Dₕ))
@@ -132,13 +132,13 @@ lemma forall_of_forall_verts_dst (he : e ∈ E(Dₕ)) (hf : f ∈ E(Dₕ))
 The *tail star* of a vertex `x` is the set of all tails of edges `e ∈ E(Dₕ)` where `x` is in the
 tail of `e`.
 -/
-def tail_star (Dₕ : DiHypergraph α) (x : α) : Set (Set α) := {t | e ∈ E(Dₕ) ∧ x ∈ e.1 ∧ t = e.1}
+def tail_star (Dₕ : DiHypergraph α) (x : α) : Set (Set α) := {t | ∃ e ∈ E(Dₕ), t = e.1 ∧ x ∈ t}
 
 /--
 The *head star* of a vertex `x` is the set of all heads of edges `e ∈ E(Dₕ)` where `x` is in the
 head of `e`.
 -/
-def head_star (Dₕ : DiHypergraph α) (x : α) : Set (Set α) := {h | e ∈ E(Dₕ) ∧ x ∈ e.2 ∧ h = e.2}
+def head_star (Dₕ : DiHypergraph α) (x : α) : Set (Set α) := {h | ∃ e ∈ E(Dₕ), h = e.2 ∧ x ∈ e.2}
 
 /--
 The *negative star* of a vertex `x` is the set of all edges `e ∈ E(Dₕ)` where `x` is in the tail of
@@ -213,6 +213,19 @@ adjacent if there is some vertex `x ∈ V(H)` where `x` is in the head of e and 
 def EAdj (Dₕ : DiHypergraph α) (e : (Set α × Set α)) (f : (Set α × Set α)) : Prop :=
   e ∈ E(Dₕ) ∧ f ∈ E(Dₕ) ∧ ∃ x, x ∈ e.2 ∧ x ∈ f.1
 
+lemma EAdj.exists_vertex (h : Dₕ.EAdj e f) : ∃ x ∈ V(Dₕ), x ∈ e.2 ∧ x ∈ f.1 := by
+  unfold EAdj at h
+  obtain ⟨x, hx⟩ := h.2.2
+  use x
+  constructor
+  · exact mem_vertexSet_of_mem_edgeSet_dst h.1 hx.1
+  · exact hx
+
+lemma EAdj.inter_nonempty (hef : Dₕ.EAdj e f) : (e.2 ∩ f.1).Nonempty := by
+  unfold EAdj at *
+  have h' : ∃ x ∈ e.2, x ∈ f.1 := by grind
+  apply Set.inter_nonempty.mpr h'
+
 end Adjacency
 
 /-! ## Isolated vertices -/
@@ -223,6 +236,34 @@ section Isolated
 Predicate to determine if a vertex is isolated, meaning that it is not incident to any edges..
 -/
 def IsIsolated (Dₕ : DiHypergraph α) (x : α) : Prop := ∀ e ∈ E(Dₕ), x ∉ e.1 ∧ x ∉ e.2
+
+@[simp]
+lemma isIsolated_tailStar_empty (h : Dₕ.IsIsolated x) : Dₕ.tail_star x = ∅ := by
+  unfold tail_star
+  unfold IsIsolated at h
+  apply Set.eq_empty_of_forall_notMem
+  simp only [
+    Prod.exists, exists_and_right, existsAndEq, true_and, mem_setOf_eq, not_and, forall_exists_index
+  ]
+  grind
+
+lemma isIsolated_tailStar_isEmpty (h : Dₕ.IsIsolated x) : IsEmpty (Dₕ.tail_star x) := by
+  rw [isIsolated_tailStar_empty h]
+  apply Set.instIsEmptyElemEmptyCollection
+
+lemma isIsolated_headStar_empty (h : Dₕ.IsIsolated x) : Dₕ.head_star x = ∅ := by
+  unfold head_star
+  unfold IsIsolated at h
+  apply Set.eq_empty_of_forall_notMem
+  simp only [
+    Prod.exists, exists_and_right, existsAndEq, true_and, mem_setOf_eq, not_and, forall_exists_index
+  ]
+  grind
+
+lemma isIsolated_headStar_isEmpty (h : Dₕ.IsIsolated x) : IsEmpty (Dₕ.head_star x) := by
+  rw [isIsolated_headStar_empty h]
+  apply Set.instIsEmptyElemEmptyCollection
+
 
 end Isolated
 
