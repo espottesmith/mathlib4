@@ -318,6 +318,12 @@ Predicate to determine if a dihypergraph is nonempty
 -/
 def IsNonempty (Dₕ : DiHypergraph α) : Prop := (∃ x, x ∈ V(Dₕ)) ∨ (∃ e, e ∈ E(Dₕ))
 
+@[simp]
+lemma coe_nonempty : V(Dₕ).Nonempty → Dₕ.IsNonempty := by
+  unfold IsNonempty
+  unfold Set.Nonempty
+  exact fun a ↦ Or.symm (Or.inr a)
+
 /--
 The empty dihypergraph of type α
 -/
@@ -328,6 +334,17 @@ def emptyDiHypergraph (α : Type*) : DiHypergraph α where
   edge_src_dst_isSubset_vertexSet' := by
     intro e he
     exact False.elim he
+
+lemma isEmpty_empty_hypergraph : IsEmpty (emptyDiHypergraph α) := by
+  unfold IsEmpty
+  exact Prod.mk_inj.mp rfl
+
+lemma isEmpty_eq_empty_hypergraph (h : Dₕ.IsEmpty) : emptyDiHypergraph α = Dₕ := by
+  unfold IsEmpty at h
+  have hv : V(emptyDiHypergraph α) = ∅ := rfl
+  have he : E(emptyDiHypergraph α) = ∅ := rfl
+  apply DiHypergraph.ext_iff.mpr
+  grind
 
 lemma isBHypergraph_emptyDiHypergraph : (emptyDiHypergraph α).IsBHypergraph := by
   unfold IsBHypergraph
@@ -344,6 +361,31 @@ lemma isBFHypergraph_emptyDiHypergraph : (emptyDiHypergraph α).IsBFHypergraph :
 lemma isNonEndless_emptyDiHypergraph : (emptyDiHypergraph α).IsNonEndless := by
   unfold IsNonEndless
   simp
+
+lemma edge_not_mem_empty : e ∉ E(emptyDiHypergraph α) := by simp
+
+lemma IsEmpty.eq (hDₕ : Dₕ.IsEmpty) : V(Dₕ) = ∅ ∧ E(Dₕ) = ∅ := by exact hDₕ
+
+@[simp]
+lemma isEmpty_iff_forall_not_mem : Dₕ.IsEmpty ↔ (∀ x, x ∉ V(Dₕ)) ∧ (∀ e, e ∉ E(Dₕ)) := by
+  grind [IsEmpty, Set.notMem_empty]
+
+lemma IsEmpty.not_mem_vertex (hH : Dₕ.IsEmpty) : x ∉ V(Dₕ) := by
+  unfold IsEmpty at hH
+  grind
+
+lemma IsEmpty.not_mem_edge (hH : Dₕ.IsEmpty) : e ∉ E(Dₕ) := by
+  unfold IsEmpty at hH
+  grind
+
+lemma not_isEmpty : ¬Dₕ.IsEmpty ↔ Dₕ.IsNonempty := by grind [IsEmpty, IsNonempty]
+
+lemma not_isNonempty : ¬Dₕ.IsNonempty ↔ Dₕ.IsEmpty := not_iff_comm.mp not_isEmpty
+
+alias ⟨_, IsEmpty.not_isNonempty⟩ := not_isNonempty
+alias ⟨_, IsNonempty.not_isEmpty⟩ := not_isEmpty
+
+lemma isEmpty_or_isNonempty : Dₕ.IsEmpty ∨ Dₕ.IsNonempty := by grind [IsEmpty, IsNonempty]
 
 end Empty
 
