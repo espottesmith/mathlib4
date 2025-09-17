@@ -264,6 +264,43 @@ lemma isIsolated_headStar_isEmpty (h : Dₕ.IsIsolated x) : IsEmpty (Dₕ.head_s
   rw [isIsolated_headStar_empty h]
   apply Set.instIsEmptyElemEmptyCollection
 
+@[simp]
+lemma isIsolated_negativeStar_empty (h : Dₕ.IsIsolated x) : Dₕ.negative_star x = ∅ := by
+  unfold negative_star
+  unfold IsIsolated at h
+  apply Set.eq_empty_of_forall_notMem
+  simp only [mem_setOf_eq, not_and]
+  grind
+
+lemma isIsolated_negativeStar_isEmpty (h : Dₕ.IsIsolated x) : IsEmpty (Dₕ.negative_star x) := by
+  rw [isIsolated_negativeStar_empty h]
+  apply Set.instIsEmptyElemEmptyCollection
+
+@[simp]
+lemma isIsolated_negativeDegree_zero (h : Dₕ.IsIsolated x) : Dₕ.negative_degree x = 0 := by
+  unfold negative_degree
+  rw [isIsolated_negativeStar_empty h]
+  apply Set.encard_eq_zero.mpr
+  grind
+
+@[simp]
+lemma isIsolated_positiveStar_empty (h : Dₕ.IsIsolated x) : Dₕ.positive_star x = ∅ := by
+  unfold positive_star
+  unfold IsIsolated at h
+  apply Set.eq_empty_of_forall_notMem
+  simp only [mem_setOf_eq, not_and]
+  grind
+
+lemma isIsolated_positiveStar_isEmpty (h : Dₕ.IsIsolated x) : IsEmpty (Dₕ.positive_star x) := by
+  rw [isIsolated_positiveStar_empty h]
+  apply Set.instIsEmptyElemEmptyCollection
+
+@[simp]
+lemma isIsolated_positiveDegree_zero (h : Dₕ.IsIsolated x) : Dₕ.positive_degree x = 0 := by
+  unfold positive_degree
+  rw [isIsolated_positiveStar_empty h]
+  apply Set.encard_eq_zero.mpr
+  grind
 
 end Isolated
 
